@@ -6,8 +6,8 @@ import cupyx.scipy.sparse as cp_sparse
 import time
 
 # Load data and set parameters
-X_sparse_cpu = scipy.sparse.load_npz('preprocessed_features.npz')
-y_cpu = np.load('preprocessed_labels.npy')
+X_sparse_cpu = scipy.sparse.load_npz('data/processed/preprocessed_features.npz')
+y_cpu = np.load('data/processed/preprocessed_labels.npy')
 n_samples, n_features = X_sparse_cpu.shape
 n_classes = len(np.unique(y_cpu))
 h1_size, h2_size = 128, 64

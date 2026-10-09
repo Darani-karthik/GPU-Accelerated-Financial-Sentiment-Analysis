@@ -148,8 +148,8 @@ def run_stump_forest():
     # Data loading
     print("\n[1/4] Loading data...")
     start_load = time.time()
-    X = scipy.sparse.load_npz('preprocessed_features.npz').toarray()
-    y = np.load('preprocessed_labels.npy')
+    X = scipy.sparse.load_npz('data/processed/preprocessed_features.npz').toarray()
+    y = np.load('data/processed/preprocessed_labels.npy')
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     print(f"    Data loading time: {time.time() - start_load:.3f}s")
     

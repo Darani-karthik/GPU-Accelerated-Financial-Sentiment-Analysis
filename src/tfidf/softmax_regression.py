@@ -4,8 +4,8 @@ import cupy as cp
 import cupyx.scipy.sparse as cp_sparse
 
 # --- Load / prepare (same as your original setup) ---
-X_sparse_cpu = scipy.sparse.load_npz('preprocessed_features.npz').tocsr()
-y_cpu = np.load('preprocessed_labels.npy').astype(np.int32)
+X_sparse_cpu = scipy.sparse.load_npz('data/processed/preprocessed_features.npz').tocsr()
+y_cpu = np.load('data/processed/preprocessed_labels.npy').astype(np.int32)
 
 n_samples, n_features = X_sparse_cpu.shape
 n_classes = int(len(np.unique(y_cpu)))

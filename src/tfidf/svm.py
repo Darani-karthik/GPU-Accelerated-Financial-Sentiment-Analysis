@@ -8,8 +8,8 @@ from sklearn.preprocessing import normalize
 print("--- Running Step 3: SVM (Hybrid CUDA & CuPy) ---")
 
 # 1. Load Data & Set Params
-X_sparse_cpu = scipy.sparse.load_npz('preprocessed_features.npz').tocsr()  # ✅ ensure CSR format
-y_cpu = np.load('preprocessed_labels.npy')
+X_sparse_cpu = scipy.sparse.load_npz('data/processed/preprocessed_features.npz').tocsr()  # ✅ ensure CSR format
+y_cpu = np.load('data/processed/preprocessed_labels.npy')
 
 # Normalize feature matrix
 X_sparse_cpu = normalize(X_sparse_cpu, norm='l2', axis=1)

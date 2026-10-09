@@ -68,7 +68,7 @@ find_best_split_mse_kernel = cp.RawKernel(find_best_split_mse_kernel_code, 'find
 print("--- Running Step 10: XGBoost (Ultra-Compact CUDA Stumps) ---")
 
 # --- Data Loading and Preparation ---
-X, y = scipy.sparse.load_npz('preprocessed_features.npz').toarray(), np.load('preprocessed_labels.npy')
+X, y = scipy.sparse.load_npz('data/processed/preprocessed_features.npz').toarray(), np.load('data/processed/preprocessed_labels.npy')
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
 # --- Hyperparameter Tuning ---

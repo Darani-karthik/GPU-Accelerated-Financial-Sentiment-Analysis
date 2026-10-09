@@ -140,8 +140,8 @@ def run_stump_forest():
     # 1) Load
     print("\n[1/5] Loading data...")
     start_load = time.time()
-    X_sparse = scipy.sparse.load_npz('preprocessed_features.npz')
-    y = np.load('preprocessed_labels.npy')
+    X_sparse = scipy.sparse.load_npz('data/processed/preprocessed_features.npz')
+    y = np.load('data/processed/preprocessed_labels.npy')
     print(f"    Original shape: {X_sparse.shape}")
     print(f"    Data loading time: {time.time() - start_load:.3f}s")
 

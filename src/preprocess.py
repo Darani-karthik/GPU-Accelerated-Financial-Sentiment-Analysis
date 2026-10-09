@@ -2,12 +2,13 @@
 
 import pandas as pd
 import numpy as np
+import os
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
 import scipy.sparse
 
-def preprocess_and_save(input_path='fin_data_1.csv'):
+def preprocess_and_save(input_path='data/fin_data_1.csv'):
     """
     Loads, preprocesses financial sentiment data, and saves it for model training.
     """
@@ -39,13 +40,14 @@ def preprocess_and_save(input_path='fin_data_1.csv'):
         print(f"- {class_name}: {i}")
 
     # --- Save Preprocessed Data ---
-    scipy.sparse.save_npz('preprocessed_features.npz', X_sparse)
-    np.save('preprocessed_labels.npy', y)
+    os.makedirs('data/processed', exist_ok=True)
+    scipy.sparse.save_npz('data/processed/preprocessed_features.npz', X_sparse)
+    np.save('data/processed/preprocessed_labels.npy', y)
     
     print("\nPreprocessing complete.")
     print(f"Features shape: {X_sparse.shape}")
     print(f"Labels shape: {y.shape}")
-    print("Preprocessed data saved to 'preprocessed_features.npz' and 'preprocessed_labels.npy'.")
+    print("Preprocessed data saved to 'data/processed/preprocessed_features.npz' and 'data/processed/preprocessed_labels.npy'.")
     print("------------------------------------------\n")
 
 if __name__ == '__main__':

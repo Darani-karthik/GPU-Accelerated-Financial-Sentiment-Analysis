@@ -14,7 +14,7 @@ print("--- Running Step 3: SVM (Hybrid CUDA & CuPy) with SVD Embedding ---")
 print("Loading fin_data_1.csv and performing initial processing...")
 
 # Load data
-df = pd.read_csv('fin_data_1.csv')
+df = pd.read_csv('data/fin_data_1.csv')
 
 # Map Sentiment to numerical labels (+1, 0, -1 are internally used as 0, 1, 2)
 sentiment_map = {'negative': 0, 'neutral': 1, 'positive': 2}

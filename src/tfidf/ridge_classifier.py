@@ -7,8 +7,8 @@ from sklearn.metrics import accuracy_score
 import time
 
 # Load data
-X_csr_full = scipy.sparse.load_npz('/content/preprocessed_features.npz').tocsr()
-y_full = np.load('/content/preprocessed_labels.npy')
+X_csr_full = scipy.sparse.load_npz('data/processed/preprocessed_features.npz').tocsr()
+y_full = np.load('data/processed/preprocessed_labels.npy')
 
 # Train/test split
 X_train, X_test, y_train, y_test = train_test_split(

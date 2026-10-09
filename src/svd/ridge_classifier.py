@@ -12,7 +12,7 @@ from sklearn.metrics import accuracy_score
 
 
 # Load and clean data
-df = pd.read_csv('fin_data_1.csv')
+df = pd.read_csv('data/fin_data_1.csv')
 df.columns = ['Sentence', 'Sentiment']
 df.dropna(subset=['Sentence', 'Sentiment'], inplace=True)
 df = df[df['Sentence'].apply(lambda x: isinstance(x, str))]

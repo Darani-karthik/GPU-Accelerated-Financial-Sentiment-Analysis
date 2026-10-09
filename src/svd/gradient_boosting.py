@@ -74,7 +74,7 @@ find_best_split_mse_kernel = cp.RawKernel(find_best_split_mse_kernel_code, 'find
 print("Loading fin_data_1.csv, preprocessing, and embedding data with SVD (on GPU)...")
 
 # Load data
-df = pd.read_csv('fin_data_1.csv')
+df = pd.read_csv('data/fin_data_1.csv')
 
 # Map Sentiment to numerical labels (0, 1, 2)
 sentiment_map = {'negative': 0, 'neutral': 1, 'positive': 2}
