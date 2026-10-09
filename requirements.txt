@@ -1,0 +1,14 @@
+# Core
+numpy
+scipy
+pandas
+scikit-learn
+
+# GPU (requires an NVIDIA GPU + CUDA toolkit).
+# Pick the CuPy wheel that matches your CUDA version, e.g. cupy-cuda12x or cupy-cuda11x.
+cupy-cuda12x
+
+# Transformer notebooks only (notebooks/)
+torch
+sentence-transformers
+jupyter
