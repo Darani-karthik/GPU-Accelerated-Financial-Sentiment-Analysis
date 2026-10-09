@@ -1,67 +1,170 @@
 # HPC_Project: GPU-Accelerated Financial Sentiment Analysis
 
-## 1. Project Overview
+Machine-learning and deep-learning models for financial sentiment classification (positive / neutral / negative), where the compute-heavy step of each model is written as a **custom CUDA C++ kernel** and driven from Python through [CuPy](https://cupy.dev/).
 
-This project presents a comprehensive framework for high-performance financial sentiment analysis using custom CUDA C++ kernels in a Python environment. The core objective is to move beyond standard library calls and implement the fundamental computational logic of various Machine Learning (ML) and Deep Learning (DL) models directly on the GPU.
+The goal is to look inside the models rather than call library routines: for each algorithm, find the operation that dominates the runtime (a sparse gradient update, a split search, a matrix multiply) and parallelise it by hand on the GPU.
 
-The methodology is centered around a **Hybrid CUDA Development Model**. This pragmatic approach uses high-level, optimized CuPy for standard GPU operations (like dense matrix multiplication) while identifying the most unique or computationally intensive part of each algorithm and accelerating it with a custom, from-scratch CUDA C++ kernel.
+## Contents
 
-### Dataset: Financial PhraseBank
-The project utilizes the well-regarded Financial PhraseBank dataset, which consists of 4,840 English-language sentences from financial news articles. All sentences were labeled for sentiment (Positive, Negative, Neutral) by 16 finance and business experts, ensuring high-quality, domain-specific annotations.
+- [Dataset](#dataset)
+- [Repository structure](#repository-structure)
+- [Approach](#approach)
+- [Classical models](#classical-models)
+- [Transformer experiments](#transformer-experiments)
+- [Getting started](#getting-started)
+- [Notes and limitations](#notes-and-limitations)
+- [Future work](#future-work)
+- [Tech stack](#tech-stack)
 
----
+## Dataset
 
-## 2. Phase 1: Foundational Models with TF-IDF Embeddings
+[`data/fin_data_1.csv`](data/fin_data_1.csv) holds English-language sentences from financial news, each labelled positive, neutral or negative. The project was originally described as using the Financial PhraseBank dataset.
 
-The initial phase focused on establishing strong performance baselines using classic ML and DL models. The text data was preprocessed using a standard TF-IDF vectorizer to create a high-dimensional (2000-feature) sparse representation of the sentences.
+| | |
+|---|---|
+| Rows | 5,842 |
+| Columns | `Sentence`, `Sentiment` |
+| neutral | 3,130 |
+| positive | 1,852 |
+| negative | 860 |
 
-### Analysis of Foundational Models:
+The classes are imbalanced (neutral is about 54% of the data). The Transformer notebooks counter this with random oversampling of the minority classes.
 
-*   **Artificial Neural Networks (ANN):** The simple 1-hidden-layer ANN proved to be the most effective model on the TF-IDF features, achieving the highest accuracy. Its non-linear activation function allowed it to capture complex patterns that were inaccessible to the other models. The custom CUDA kernel was crucial for efficiently calculating the gradient of the first layer connected to the sparse input data (`X.T @ delta`).
+## Repository structure
 
-*   **Support Vector Machine (SVM) with Conjugate Gradient:** This was the strongest-performing non-neural model. It demonstrates an advanced numerical method, solving for the optimal weights directly by using a CUDA-accelerated Conjugate Gradient solver. The custom CUDA kernels for sparse matrix-vector products were the core of this high-performance solver.
+```
+HPC_Project/
+├── data/
+│   └── fin_data_1.csv               # raw dataset
+│                                    # (data/processed/ is generated, git-ignored)
+├── src/
+│   ├── preprocess.py                # CSV -> TF-IDF features + labels
+│   ├── tfidf/                       # models trained on sparse TF-IDF features
+│   │   ├── ann.py
+│   │   ├── ridge_classifier.py
+│   │   ├── softmax_regression.py
+│   │   ├── softmax_regression_tiled.py
+│   │   ├── svm.py
+│   │   ├── random_forest.py
+│   │   └── gradient_boosting.py
+│   └── svd/                         # the same families on dense SVD embeddings
+│       ├── ann.py
+│       ├── ridge_classifier.py
+│       ├── softmax_regression.py
+│       ├── svm.py
+│       ├── random_forest.py
+│       └── gradient_boosting.py
+├── notebooks/                       # Transformer experiments, phases 1-9
+├── requirements.txt
+└── README.md
+```
 
-*   **Ensemble Models (Random Forest & Gradient Boosting):** These models showcased a different parallel programming paradigm. Instead of algebraic operations, their bottleneck is a combinatorial search for the best split point in a tree. A powerful CUDA kernel was written to parallelize this search, with thousands of threads evaluating potential splits simultaneously to find the one with the best Gini Impurity or MSE.
+## Approach
 
-*   **Ridge Classifier (solved with Conjugate Gradient): This was the strongest-performing non-neural model and demonstrated a sophisticated numerical approach. Instead of iterative gradient descent, this model formulates the L2-regularized objective function as a system of linear equations ((X.T*X + alpha*I)w = X.T*y). It then uses a custom-built Conjugate Gradient (CG) solver to find the optimal weights directly. The core of this high-performance solver was implemented with two from-scratch CUDA C++ kernels for the most intensive operations: sparse matrix-vector multiplication (csr_mv) and its transpose (csr_mvt).
+The project follows a **hybrid CUDA model**:
 
-*   **Softmax Regression: This model served as a robust linear baseline, achieving a respectable accuracy. It represents the classic gradient descent approach. The entire learning process was driven by a custom CUDA C++ kernel that calculated the gradient of the cross-entropy loss and performed the weight updates in a massively parallel fashion. Its performance highlights the effectiveness of linear models on this dataset but also shows their limitations compared to the ANNs.
+- **CuPy** handles the standard GPU work: array management, dense and sparse matrix products, reductions.
+- **Custom CUDA C++ kernels** (compiled at runtime with `cupy.RawKernel`) handle the part that is specific to each algorithm. Patterns used across the code base:
+  - **CSR sparse traversal**: forward products and gradient updates read the TF-IDF matrix directly in CSR form.
+  - **`atomicAdd` scatter updates**: many threads accumulate into the same weight.
+  - **`atomicMin` reductions**: thousands of threads compete to find the best tree split.
+  - **Shared-memory tiling**: used in the tiled softmax kernels and in the Transformer matrix multiply.
+  - **Conjugate Gradient**: the ridge classifier solves `(XᵀX + αI)w = Xᵀy` iteratively, with custom mat-vec kernels.
 
----
+Two feature pipelines are compared:
 
-## 3. Phase 2: Advanced Architectures with Semantic Embeddings
+1. **TF-IDF** (2,000 features, sparse), produced by `src/preprocess.py`.
+2. **SVD embeddings** (dense; 256, 300 or 512 components depending on the script): TF-IDF reduced with truncated SVD.
 
-Building on the insights from the foundational models, the project's next phase explores more advanced feature extraction techniques and state-of-the-art DL architectures, as outlined in the formal project plan.
+## Classical models
 
-### Advanced Feature Engineering & Modeling:
+Each model has a script for both feature pipelines.
 
-*   **Dimensionality Reduction (SVD & NMF):** To move beyond sparse features, techniques like Singular Value Decomposition (SVD) and Non-negative Matrix Factorization (NMF) are applied. These methods create dense, lower-dimensional feature representations. The matrix operations central to these algorithms are heavily accelerated using custom CUDA kernels for improved efficiency.
+| Model | What the custom kernel accelerates | `src/tfidf/` | `src/svd/` |
+|---|---|---|---|
+| **ANN** (hidden layers 128 → 64, ReLU) | First-layer weight update. Sparse version: CSR traversal with `atomicAdd`. Dense version: 2-D grid over the weight matrix. | `ann.py` | `ann.py` |
+| **Softmax regression** | Cross-entropy gradient and weight update, one block per sample. Tiled variants use shared memory (sample-tiled and feature-tiled). | `softmax_regression.py`, `softmax_regression_tiled.py` | `softmax_regression.py` |
+| **Linear SVM** (one-vs-rest, hinge loss) | Feature-parallel sub-gradient update. | `svm.py` | `svm.py` |
+| **Ridge classifier** | Sparse (`csr_mv_vector`, `csr_mvt_improved`) or dense (`dense_mv`, `dense_mtv`) mat-vec products inside a Conjugate Gradient solver. | `ridge_classifier.py` | `ridge_classifier.py` |
+| **Random forest** (10 stump trees) | Parallel best-split search over feature/threshold candidates (Gini impurity), plus a prediction kernel. | `random_forest.py` | `random_forest.py` |
+| **Gradient boosting** (one-vs-rest regression stumps) | Best-split search minimising MSE, reduced with `atomicMin`. | `gradient_boosting.py` | `gradient_boosting.py` |
 
-*   **Semantic Embeddings (Sentence-BERT):** To capture the contextual meaning of sentences—a weakness of TF-IDF—the project leverages a powerful, pretrained Sentence-BERT model. This generates high-quality, dense semantic embeddings for each sentence, providing a rich input for the final model.
+## Transformer experiments
 
-*   **Transformer-Based Model Integration:** The final stage of the project integrates a Transformer-based architecture with the optimized Sentence-BERT embeddings. The core components of the Transformer, such as the self-attention mechanism, are composed of matrix multiplications and activation functions. Custom CUDA kernels, specifically designed with **tiling techniques** for efficient cache usage, are implemented to accelerate these large-scale computations, forming the heart of the high-performance model.
+[`notebooks/`](notebooks/) contains the second phase: small Transformer-style classifiers (`d_model` of 32 or 64, Q/K/V projections and a feed-forward layer) whose matrix multiplications, ReLU and row-softmax run on custom CUDA kernels. The notebooks compare different input representations and different matrix-multiply back-ends. Notebook 09 trains a plain MLP instead.
 
-## 4. Custom CUDA Kernel Optimization
+| Notebook | Focus |
+|---|---|
+| `01_ohe_transformer` | One-hot-encoded input with random oversampling; baseline Transformer. |
+| `02_svd_embeddings_generation` | Builds word embeddings on the GPU: co-occurrence matrix → PPMI → SVD. |
+| `03_svd_transformer` | Transformer on the SVD(PPMI) embeddings (co-occurrence and PPMI kernels). |
+| `04_nmf_transformer` | Transformer on NMF features computed from GPU TF-IDF. |
+| `05_matrix_tiling` | Shared-memory tiled matrix multiplication (`matmul_tiled`). |
+| `05b_matrix_tiling_sample` | Variant of the tiled-matmul demo. |
+| `06_tfidf_matrix_tiling` | TF-IDF + NMF features with the tiled matrix multiply. |
+| `07_sentence_bert_transformer` | Pretrained Sentence-BERT embeddings (`all-MiniLM-L6-v2`) as input. |
+| `08_mma_vs_tiling_transformer` | Compares FP16 Tensor-Core matmul (cuBLAS "MMA") against the custom tiled kernel inside the Transformer. |
+| `09_mma_vs_tiling_mlp_training` | The same MMA vs. tiled comparison for MLP training on Sentence-BERT embeddings. |
 
-A key focus of this project was the development of custom, low-level CUDA C++ kernels for critical operations. This was done to maximize performance and demonstrate a fundamental understanding of GPU programming. Key implementations include:
-*   **Optimized Matrix Multiplication:** Kernels designed for both sparse-to-dense and dense-dense matrix products.
-*   **Tiling Techniques:** In the Transformer phase, shared memory and tiling are used to optimize matrix multiplication for large-scale computations, drastically reducing global memory access.
-*   **Custom Activation Functions:** Efficient parallel implementations of Softmax and ReLU, including numerically stable versions.
-*   **Parallel Reductions:** Advanced patterns like using `atomicMin` to find the best tree split across thousands of threads simultaneously.
+## Getting started
 
-## 5. Outcome & Future Work
+### Requirements
 
-### Outcome
-This project successfully developed a GPU-accelerated framework for efficient financial text processing. By implementing custom CUDA kernels within a hybrid development model, we achieved significant reductions in computation time while building a suite of models with high prediction accuracy. The project is a definitive demonstration of integrating low-level CUDA programming with modern ML/DL pipelines.
+- An NVIDIA GPU with a CUDA toolkit installed (every model script and most notebooks run on the GPU).
+- Python 3
 
-### Future Work
-*   **Kernel Optimization:** Further optimize the custom CUDA kernels for enhanced scalability, particularly for the Transformer's attention mechanism.
-*   **Advanced Architectures:** Experiment with additional embeddings (e.g., GloVe, FastText) and more advanced deep learning architectures like Long-Formers or BigBird for handling longer financial documents.
-*   **Real-Time Analysis:** Explore the deployment of the final Transformer model in a real-time pipeline for live sentiment prediction from financial news feeds.
+```bash
+pip install -r requirements.txt
+```
 
-## 6. Technologies Used
+`requirements.txt` pins `cupy-cuda12x`; swap it for the wheel that matches your CUDA version (for example `cupy-cuda11x`).
 
-*   **Programming Language:** Python
-*   **GPU Acceleration:** CUDA C++, CuPy
-*   **Data Processing:** NumPy, Pandas, Scikit-learn
-*   **Semantic Embeddings:** Sentence-BERT
+### Running the classical models
+
+All scripts expect to be run **from the repository root**, because they use paths relative to it (`data/...`).
+
+```bash
+# 1. TF-IDF features -> data/processed/preprocessed_features.npz and preprocessed_labels.npy
+python src/preprocess.py
+
+# 2. Any model on TF-IDF features
+python src/tfidf/ann.py
+python src/tfidf/svm.py
+
+# 3. SVD-embedding models
+python src/svd/ann.py
+```
+
+`src/preprocess.py` is a prerequisite for everything in `src/tfidf/` and for `src/svd/random_forest.py` and `src/svd/softmax_regression.py`. The other four `src/svd/` scripts read the CSV directly and build their own TF-IDF + SVD features.
+
+### Running the notebooks
+
+Start Jupyter from inside `notebooks/` so that the relative path `../data/fin_data_1.csv` resolves:
+
+```bash
+cd notebooks
+jupyter notebook
+```
+
+On Google Colab, upload `fin_data_1.csv` and change the `read_csv` path in the notebook you want to run. Notebooks 07-09 download the Sentence-BERT model on first run.
+
+## Notes and limitations
+
+- **Accuracy numbers are not directly comparable across scripts.** Some scripts report accuracy on the full dataset they trained on (for example `tfidf/ann.py`, `tfidf/svm.py`, the softmax scripts), others on a held-out 20% split (random forest, gradient boosting, ridge). The notebooks print a mix of training and validation accuracy. Treat each script's output as a smoke test of that implementation, not as a leaderboard.
+- **No benchmark of the speed-up is included.** The scripts demonstrate the kernels; they do not time them against CPU baselines.
+- **The CUDA scripts need a GPU.** They have been checked for syntax, but `cupy` and an NVIDIA device are required to execute them. Only `src/preprocess.py` runs on a CPU-only machine.
+- The Sentence-BERT and tensor-core notebooks need a recent NVIDIA GPU for FP16 Tensor-Core throughput.
+
+## Future work
+
+- Optimise the kernels further for scalability, especially the Transformer's attention.
+- Try other embeddings (GloVe, FastText) and long-document architectures such as Longformer or BigBird.
+- Add CPU baselines and a common train/test protocol so models and kernels can be compared fairly.
+- Explore deploying the final model on a live financial-news feed.
+
+## Tech stack
+
+- **Language:** Python, CUDA C++
+- **GPU:** CuPy (`RawKernel`), cuBLAS Tensor Cores
+- **Data and ML utilities:** NumPy, SciPy, pandas, scikit-learn
+- **Deep learning / embeddings:** PyTorch, Sentence-Transformers (Sentence-BERT)
