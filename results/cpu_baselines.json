@@ -1,0 +1,133 @@
+{
+  "seed": 42,
+  "setups": {
+    "as_is": {
+      "data_quality": {
+        "rows": 5842,
+        "unique_sentences": 5322,
+        "rows_in_repeated_sentences": 1040,
+        "sentences_with_conflicting_labels": 514,
+        "class_counts": {
+          "negative": 860,
+          "neutral": 3130,
+          "positive": 1852
+        }
+      },
+      "classes": [
+        "negative",
+        "neutral",
+        "positive"
+      ],
+      "n_train": 4673,
+      "n_test": 1169,
+      "models": {
+        "Always the majority class": {
+          "accuracy": 0.5355,
+          "balanced_accuracy": 0.3333,
+          "macro_f1": 0.2325,
+          "fit_seconds": 0.0
+        },
+        "Softmax regression": {
+          "accuracy": 0.6946,
+          "balanced_accuracy": 0.5541,
+          "macro_f1": 0.5622,
+          "fit_seconds": 0.06
+        },
+        "Linear SVM": {
+          "accuracy": 0.6544,
+          "balanced_accuracy": 0.546,
+          "macro_f1": 0.5487,
+          "fit_seconds": 0.02
+        },
+        "Ridge classifier": {
+          "accuracy": 0.6707,
+          "balanced_accuracy": 0.5441,
+          "macro_f1": 0.5454,
+          "fit_seconds": 0.01
+        },
+        "Random forest (100 trees)": {
+          "accuracy": 0.633,
+          "balanced_accuracy": 0.513,
+          "macro_f1": 0.518,
+          "fit_seconds": 0.52
+        },
+        "Gradient boosting (histogram)": {
+          "accuracy": 0.6262,
+          "balanced_accuracy": 0.5075,
+          "macro_f1": 0.5123,
+          "fit_seconds": 19.68
+        },
+        "MLP (128-64)": {
+          "accuracy": 0.6056,
+          "balanced_accuracy": 0.5127,
+          "macro_f1": 0.5139,
+          "fit_seconds": 23.37
+        }
+      }
+    },
+    "deduplicated": {
+      "data_quality": {
+        "rows": 4808,
+        "unique_sentences": 4808,
+        "rows_in_repeated_sentences": 0,
+        "sentences_with_conflicting_labels": 0,
+        "class_counts": {
+          "negative": 346,
+          "neutral": 2610,
+          "positive": 1852
+        }
+      },
+      "classes": [
+        "negative",
+        "neutral",
+        "positive"
+      ],
+      "n_train": 3846,
+      "n_test": 962,
+      "models": {
+        "Always the majority class": {
+          "accuracy": 0.5426,
+          "balanced_accuracy": 0.3333,
+          "macro_f1": 0.2345,
+          "fit_seconds": 0.0
+        },
+        "Softmax regression": {
+          "accuracy": 0.7817,
+          "balanced_accuracy": 0.6356,
+          "macro_f1": 0.6733,
+          "fit_seconds": 0.04
+        },
+        "Linear SVM": {
+          "accuracy": 0.7703,
+          "balanced_accuracy": 0.6715,
+          "macro_f1": 0.6923,
+          "fit_seconds": 0.01
+        },
+        "Ridge classifier": {
+          "accuracy": 0.7817,
+          "balanced_accuracy": 0.6623,
+          "macro_f1": 0.6928,
+          "fit_seconds": 0.01
+        },
+        "Random forest (100 trees)": {
+          "accuracy": 0.7848,
+          "balanced_accuracy": 0.6577,
+          "macro_f1": 0.6819,
+          "fit_seconds": 0.19
+        },
+        "Gradient boosting (histogram)": {
+          "accuracy": 0.7225,
+          "balanced_accuracy": 0.5943,
+          "macro_f1": 0.6178,
+          "fit_seconds": 17.96
+        },
+        "MLP (128-64)": {
+          "accuracy": 0.7349,
+          "balanced_accuracy": 0.6569,
+          "macro_f1": 0.6652,
+          "fit_seconds": 14.73
+        }
+      }
+    }
+  }
+}

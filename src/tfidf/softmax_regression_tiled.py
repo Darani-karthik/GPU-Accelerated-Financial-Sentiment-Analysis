@@ -28,12 +28,12 @@ epochs = 1500
 
 # --- Tiled CUDA kernel with shared memory ---
 update_weights_tiled_kernel_code = r'''
-extern "C" _global_
-void update_weights_tiled_kernel(float* _restrict_ weights,
-                                  const float* _restrict_ X_data,
-                                  const int* _restrict_ X_indices,
-                                  const int* _restrict_ X_indptr,
-                                  const float* _restrict_ error,
+extern "C" __global__
+void update_weights_tiled_kernel(float* __restrict__ weights,
+                                  const float* __restrict__ X_data,
+                                  const int* __restrict__ X_indices,
+                                  const int* __restrict__ X_indptr,
+                                  const float* __restrict__ error,
                                   float lr,
                                   int n_samples,
                                   int n_features,
@@ -46,7 +46,7 @@ void update_weights_tiled_kernel(float* _restrict_ weights,
     int tid = threadIdx.x;
 
     // Shared memory for tiling error values
-    extern _shared_ float shared_error[];
+    extern __shared__ float shared_error[];
 
     int start = X_indptr[sample_idx];
     int end = X_indptr[sample_idx + 1];
@@ -87,12 +87,12 @@ void update_weights_tiled_kernel(float* _restrict_ weights,
 # --- Alternative: Feature-parallel tiled kernel ---
 # This version parallelizes over features instead of classes
 update_weights_feature_tiled_kernel_code = r'''
-extern "C" _global_
-void update_weights_feature_tiled_kernel(float* _restrict_ weights,
-                                          const float* _restrict_ X_data,
-                                          const int* _restrict_ X_indices,
-                                          const int* _restrict_ X_indptr,
-                                          const float* _restrict_ error,
+extern "C" __global__
+void update_weights_feature_tiled_kernel(float* __restrict__ weights,
+                                          const float* __restrict__ X_data,
+                                          const int* __restrict__ X_indices,
+                                          const int* __restrict__ X_indptr,
+                                          const float* __restrict__ error,
                                           float lr,
                                           int n_samples,
                                           int n_features,
@@ -106,7 +106,7 @@ void update_weights_feature_tiled_kernel(float* _restrict_ weights,
     int block_size = blockDim.x;
 
     // Shared memory for feature values and indices
-    extern _shared_ char shared_mem[];
+    extern __shared__ char shared_mem[];
     float* shared_x = (float*)shared_mem;
     int* shared_feat = (int*)&shared_x[tile_size];
     

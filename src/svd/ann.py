@@ -107,7 +107,7 @@ for epoch in range(epochs):
     dense_update_kernel(
         blocks, threads,
         (X_gpu, delta_h1, w1, b1,
-         lr, n_samples, n_features, h1_size)
+         np.float32(lr), n_samples, n_features, h1_size)
     )
 
     if (epoch + 1) % 100 == 0:

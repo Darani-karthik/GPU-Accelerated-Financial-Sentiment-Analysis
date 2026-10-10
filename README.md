@@ -1,4 +1,7 @@
-# HPC_Project: GPU-Accelerated Financial Sentiment Analysis
+# GPU-Accelerated Financial Sentiment Analysis
+
+[![tests](https://github.com/Darani-karthik/GPU-Accelerated-Financial-Sentiment-Analysis/actions/workflows/tests.yml/badge.svg)](https://github.com/Darani-karthik/GPU-Accelerated-Financial-Sentiment-Analysis/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Machine-learning and deep-learning models for financial sentiment classification (positive / neutral / negative), where the compute-heavy step of each model is written as a **custom CUDA C++ kernel** and driven from Python through [CuPy](https://cupy.dev/).
 
@@ -11,14 +14,17 @@ The goal is to look inside the models rather than call library routines: for eac
 - [Approach](#approach)
 - [Classical models](#classical-models)
 - [Transformer experiments](#transformer-experiments)
+- [Results](#results)
 - [Getting started](#getting-started)
 - [Notes and limitations](#notes-and-limitations)
 - [Future work](#future-work)
 - [Tech stack](#tech-stack)
+- [Contributors](#contributors)
+- [License](#license)
 
 ## Dataset
 
-[`data/fin_data_1.csv`](data/fin_data_1.csv) holds English-language sentences from financial news, each labelled positive, neutral or negative. The project was originally described as using the Financial PhraseBank dataset.
+[`data/fin_data_1.csv`](data/fin_data_1.csv) holds English-language sentences from financial news, each labelled positive, neutral or negative. The project was originally described as using the Financial PhraseBank dataset, but this file has 5,842 rows where Financial PhraseBank has 4,846, and its origin and licence are not recorded here, so treat it as a financial-news sentiment dataset of unrecorded source.
 
 | | |
 |---|---|
@@ -27,16 +33,23 @@ The goal is to look inside the models rather than call library routines: for eac
 | neutral | 3,130 |
 | positive | 1,852 |
 | negative | 860 |
+| Distinct sentences | 5,322 |
+| Sentences that appear with more than one label | 514 |
 
-The classes are imbalanced (neutral is about 54% of the data). The Transformer notebooks counter this with random oversampling of the minority classes.
+The classes are imbalanced (neutral is about 54% of the data). The Transformer notebooks counter this with random oversampling of the minority classes. The repeated sentences with conflicting labels put a ceiling on the accuracy any model can reach; see [Results](#results).
 
 ## Repository structure
 
 ```
-HPC_Project/
+GPU-Accelerated-Financial-Sentiment-Analysis/
+├── .github/workflows/tests.yml      # CI: the CPU-only tests on Python 3.10 and 3.12
+├── benchmarks/                      # runs the CUDA scripts and the CPU reference models
+│   ├── run_scripts.py
+│   └── cpu_baselines.py
 ├── data/
 │   └── fin_data_1.csv               # raw dataset
 │                                    # (data/processed/ is generated, git-ignored)
+├── results/                         # committed output of benchmarks/ (JSON and Markdown)
 ├── src/
 │   ├── preprocess.py                # CSV -> TF-IDF features + labels
 │   ├── tfidf/                       # models trained on sparse TF-IDF features
@@ -55,6 +68,9 @@ HPC_Project/
 │       ├── random_forest.py
 │       └── gradient_boosting.py
 ├── notebooks/                       # Transformer experiments, phases 1-9
+├── tests/                           # CPU-only tests (no GPU needed)
+├── LICENSE
+├── pytest.ini
 ├── requirements.txt
 └── README.md
 ```
@@ -106,6 +122,52 @@ Each model has a script for both feature pipelines.
 | `08_mma_vs_tiling_transformer` | Compares FP16 Tensor-Core matmul (cuBLAS "MMA") against the custom tiled kernel inside the Transformer. |
 | `09_mma_vs_tiling_mlp_training` | The same MMA vs. tiled comparison for MLP training on Sentence-BERT embeddings. |
 
+## Results
+
+The numbers below are produced by [`benchmarks/`](benchmarks/) and committed in [`results/`](results/). The CUDA runs were measured on an NVIDIA GeForce RTX 4070 Laptop GPU (8 GB) with CuPy 14.2.0 and Python 3.10.11. The Transformer notebooks are not benchmarked.
+
+### CUDA scripts
+
+Every script was run unchanged, three times; the time is the median wall-clock seconds of the whole process, including the CuPy import, run-time kernel compilation and data transfer. *Measured on* says what the printed accuracy covers, which differs between scripts. Where the three runs disagreed, the range is in brackets. Full table: [results/cuda_runs.md](results/cuda_runs.md).
+
+| Script | Model | Accuracy printed (%) | Measured on | Time (s) |
+|---|---|---|---|---|
+| `tfidf/ann.py` | ANN (128-64) | 73.79 (73.3 to 74.2) | all rows (training data) | 13.0 |
+| `tfidf/softmax_regression.py` | Softmax regression | 68.45 | all rows (training data) | 1.4 |
+| `tfidf/softmax_regression_tiled.py` | Softmax regression, tiled | 68.45 | all rows (training data) | 1.5 |
+| `tfidf/svm.py` | Linear SVM | 53.58 | all rows (training data) | 7.3 |
+| `tfidf/ridge_classifier.py` | Ridge classifier | 67.32 | held-out 20 % | 1.8 |
+| `tfidf/random_forest.py` | Random forest (stumps) | 53.55 | held-out 20 % | 2.3 |
+| `tfidf/gradient_boosting.py` | Gradient boosting (stumps) | 56.89 (55.9 to 56.9) | held-out 20 % | 220.0 |
+| `svd/ann.py` | ANN (128-64) | 67.72 (66.9 to 67.8) | all rows (training data) | 3.8 |
+| `svd/softmax_regression.py` | Softmax regression | 66.86 | all rows (training data) | 6.0 |
+| `svd/svm.py` | Linear SVM | 62.86 | all rows (training data) | 3.3 |
+| `svd/ridge_classifier.py` | Ridge classifier | 67.49 | held-out 20 % | 3.1 |
+| `svd/random_forest.py` | Random forest (stumps) | 53.55 | held-out 20 % | 3.2 |
+| `svd/gradient_boosting.py` | Gradient boosting (stumps) | 53.55 | held-out 20 % | 8.0 |
+
+### CPU reference models
+
+Standard scikit-learn models with default settings and no tuning, on the same TF-IDF features and the same stratified 80/20 split (`random_state=42`) as the CUDA scripts that hold out data. The fit time is a single-run wall-clock figure for the fit only. Full table, including a second version with repeated sentences removed: [results/cpu_baselines.md](results/cpu_baselines.md).
+
+| Model | Accuracy (%) | Balanced accuracy (%) | Macro-F1 | Fit time (s) |
+|---|---|---|---|---|
+| Always the majority class | 53.5 | 33.3 | 0.233 | 0.00 |
+| Softmax regression | 69.5 | 55.4 | 0.562 | 0.06 |
+| Linear SVM | 65.4 | 54.6 | 0.549 | 0.02 |
+| Ridge classifier | 67.1 | 54.4 | 0.545 | 0.01 |
+| Random forest (100 trees) | 63.3 | 51.3 | 0.518 | 0.52 |
+| Gradient boosting (histogram) | 62.6 | 50.7 | 0.512 | 19.68 |
+| MLP (128-64) | 60.6 | 51.3 | 0.514 | 23.37 |
+
+### What the numbers say
+
+- **The CUDA ridge classifier matches its CPU counterpart** (67.3% against 67.1% on the same held-out rows), so that kernel is doing the same job.
+- **The stump forests are no better than a constant guess.** The CUDA random forest and the SVD gradient boosting score 53.55%, the same as always predicting neutral (53.5%), because depth-one trees cannot do much here. The CPU random forest, with full trees, reaches 63.3%.
+- **Accuracies marked "all rows" are training accuracy**, so they are not comparable with the held-out ones.
+- **The data limits the accuracy.** With the 514 conflicting repeated sentences removed (4,808 rows left), the CPU models reach 72 to 79% instead of 61 to 70%, while the majority-class baseline stays near 54%.
+- **There is no speed-up claim.** The CUDA times cover the whole process and the CPU times cover the fit only, so they cannot be compared. With 5,842 sentences the GPU has little to gain; the scripts demonstrate the kernels.
+
 ## Getting started
 
 ### Requirements
@@ -137,6 +199,18 @@ python src/svd/ann.py
 
 `src/preprocess.py` is a prerequisite for everything in `src/tfidf/` and for `src/svd/random_forest.py` and `src/svd/softmax_regression.py`. The other four `src/svd/` scripts read the CSV directly and build their own TF-IDF + SVD features.
 
+### Reproducing the results and running the tests
+
+```bash
+python -m benchmarks.cpu_baselines               # CPU reference models (no GPU needed)
+python -m benchmarks.run_scripts --repeats 3     # every CUDA script, median of 3 runs (needs the GPU)
+
+pip install pytest
+python -m pytest                                 # CPU-only tests
+```
+
+The tests cover the preprocessing, the benchmark code (output parsing, summaries, CPU baselines) and the dataset figures quoted in this README. They do not run the CUDA kernels; GitHub Actions runs them on Python 3.10 and 3.12.
+
 ### Running the notebooks
 
 Start Jupyter from inside `notebooks/` so that the relative path `../data/fin_data_1.csv` resolves:
@@ -151,15 +225,17 @@ On Google Colab, upload `fin_data_1.csv` and change the `read_csv` path in the n
 ## Notes and limitations
 
 - **Accuracy numbers are not directly comparable across scripts.** Some scripts report accuracy on the full dataset they trained on (for example `tfidf/ann.py`, `tfidf/svm.py`, the softmax scripts), others on a held-out 20% split (random forest, gradient boosting, ridge). The notebooks print a mix of training and validation accuracy. Treat each script's output as a smoke test of that implementation, not as a leaderboard.
-- **No benchmark of the speed-up is included.** The scripts demonstrate the kernels; they do not time them against CPU baselines.
-- **The CUDA scripts need a GPU.** They have been checked for syntax, but `cupy` and an NVIDIA device are required to execute them. Only `src/preprocess.py` runs on a CPU-only machine.
+- **No speed-up is claimed.** The timings in [Results](#results) are whole-process wall-clock times on one laptop GPU, not kernel timings, and they are not set against CPU times for the same work.
+- **The CUDA scripts need a GPU.** `cupy` and an NVIDIA device are required to run them. Only `src/preprocess.py`, the benchmarks' CPU baselines and the tests run on a CPU-only machine.
+- **The dataset contains repeated sentences with conflicting labels** (514 of them), which caps the accuracy of every model.
 - The Sentence-BERT and tensor-core notebooks need a recent NVIDIA GPU for FP16 Tensor-Core throughput.
 
 ## Future work
 
 - Optimise the kernels further for scalability, especially the Transformer's attention.
 - Try other embeddings (GloVe, FastText) and long-document architectures such as Longformer or BigBird.
-- Add CPU baselines and a common train/test protocol so models and kernels can be compared fairly.
+- Run every CUDA script on the same held-out split, so that all of them can be compared with the CPU baselines directly.
+- Replace the depth-one trees in the forest and boosting kernels with deeper ones.
 - Explore deploying the final model on a live financial-news feed.
 
 ## Tech stack
@@ -168,3 +244,16 @@ On Google Colab, upload `fin_data_1.csv` and change the `read_csv` path in the n
 - **GPU:** CuPy (`RawKernel`), cuBLAS Tensor Cores
 - **Data and ML utilities:** NumPy, SciPy, pandas, scikit-learn
 - **Deep learning / embeddings:** PyTorch, Sentence-Transformers (Sentence-BERT)
+
+## Contributors
+
+A team project, built by:
+
+- Darani Karthik ([@Darani-karthik](https://github.com/Darani-karthik))
+- Mahizhan S ([@Mahizhan-S](https://github.com/Mahizhan-S))
+- Aakash Raj ([@Aakash-R1](https://github.com/Aakash-R1))
+- Pavani Akshaya ([@Pavaniakshaya](https://github.com/Pavaniakshaya))
+
+## License
+
+The code is released under the [MIT License](LICENSE). The dataset in `data/` is not covered by it and keeps whatever terms it was published under.

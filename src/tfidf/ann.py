@@ -51,10 +51,10 @@ w3 = (cp.random.randn(h2_size, n_classes) * cp.sqrt(2./h2_size)).astype(cp.float
 b3 = cp.zeros(n_classes, dtype=cp.float32)
 
 # Prepare GPU data structures
-d_X_sparse = cp_sparse.csr_matrix(X_sparse_cpu)
-d_X_data = cp.asarray(X_sparse_cpu.data)
-d_X_indices = cp.asarray(X_sparse_cpu.indices)
-d_X_indptr = cp.asarray(X_sparse_cpu.indptr)
+d_X_sparse = cp_sparse.csr_matrix(X_sparse_cpu.astype(np.float32))
+d_X_data = cp.asarray(X_sparse_cpu.data.astype(np.float32))
+d_X_indices = cp.asarray(X_sparse_cpu.indices.astype(np.int32))
+d_X_indptr = cp.asarray(X_sparse_cpu.indptr.astype(np.int32))
 d_y_one_hot = cp.asarray(np.eye(n_classes)[y_cpu], dtype=cp.float32)
 threads_per_block = 128
 blocks_per_grid = (h1_size + threads_per_block - 1) // threads_per_block
@@ -84,7 +84,7 @@ for epoch in range(epochs):
     update_sparse_weights_kernel(
         (blocks_per_grid,), (threads_per_block,),
         (w1, b1, delta_h1, d_X_data, d_X_indices, d_X_indptr,
-         lr, n_samples, h1_size)
+         np.float32(lr), n_samples, h1_size)
     )
 
     if (epoch + 1) % 100 == 0:

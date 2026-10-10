@@ -1,0 +1,142 @@
+{
+  "environment": {
+    "gpu": "NVIDIA GeForce RTX 4070 Laptop GPU",
+    "gpu_memory_gb": 8.0,
+    "cuda_runtime": 12090,
+    "cupy": "14.2.0",
+    "python": "3.10.11"
+  },
+  "repeats": 3,
+  "scripts": {
+    "tfidf/ann": {
+      "status": "ok",
+      "seconds_median": 13.03,
+      "seconds_min": 13.01,
+      "seconds_max": 13.21,
+      "accuracy": 73.79,
+      "accuracy_min": 73.31,
+      "accuracy_max": 74.15,
+      "runs": 3
+    },
+    "tfidf/softmax_regression": {
+      "status": "ok",
+      "seconds_median": 1.41,
+      "seconds_min": 1.41,
+      "seconds_max": 1.47,
+      "accuracy": 68.45,
+      "accuracy_min": 68.45,
+      "accuracy_max": 68.45,
+      "runs": 3
+    },
+    "tfidf/softmax_regression_tiled": {
+      "status": "ok",
+      "seconds_median": 1.47,
+      "seconds_min": 1.44,
+      "seconds_max": 1.47,
+      "accuracy": 68.45,
+      "accuracy_min": 68.45,
+      "accuracy_max": 68.45,
+      "runs": 3
+    },
+    "tfidf/svm": {
+      "status": "ok",
+      "seconds_median": 7.32,
+      "seconds_min": 7.29,
+      "seconds_max": 7.35,
+      "accuracy": 53.58,
+      "accuracy_min": 53.58,
+      "accuracy_max": 53.58,
+      "runs": 3
+    },
+    "tfidf/ridge_classifier": {
+      "status": "ok",
+      "seconds_median": 1.76,
+      "seconds_min": 1.7,
+      "seconds_max": 1.82,
+      "accuracy": 67.32,
+      "accuracy_min": 67.32,
+      "accuracy_max": 67.32,
+      "runs": 3
+    },
+    "tfidf/random_forest": {
+      "status": "ok",
+      "seconds_median": 2.3,
+      "seconds_min": 2.2,
+      "seconds_max": 2.57,
+      "accuracy": 53.55,
+      "accuracy_min": 53.55,
+      "accuracy_max": 53.55,
+      "runs": 3
+    },
+    "tfidf/gradient_boosting": {
+      "status": "ok",
+      "seconds_median": 220.0,
+      "seconds_min": 219.84,
+      "seconds_max": 220.07,
+      "accuracy": 56.89,
+      "accuracy_min": 55.86,
+      "accuracy_max": 56.89,
+      "runs": 3
+    },
+    "svd/ann": {
+      "status": "ok",
+      "seconds_median": 3.75,
+      "seconds_min": 3.69,
+      "seconds_max": 4.12,
+      "accuracy": 67.72,
+      "accuracy_min": 66.91,
+      "accuracy_max": 67.84,
+      "runs": 3
+    },
+    "svd/softmax_regression": {
+      "status": "ok",
+      "seconds_median": 6.0,
+      "seconds_min": 5.96,
+      "seconds_max": 6.01,
+      "accuracy": 66.86,
+      "accuracy_min": 66.86,
+      "accuracy_max": 66.86,
+      "runs": 3
+    },
+    "svd/svm": {
+      "status": "ok",
+      "seconds_median": 3.3,
+      "seconds_min": 3.26,
+      "seconds_max": 3.5,
+      "accuracy": 62.86,
+      "accuracy_min": 62.86,
+      "accuracy_max": 62.86,
+      "runs": 3
+    },
+    "svd/ridge_classifier": {
+      "status": "ok",
+      "seconds_median": 3.15,
+      "seconds_min": 3.08,
+      "seconds_max": 4.63,
+      "accuracy": 67.49,
+      "accuracy_min": 67.49,
+      "accuracy_max": 67.49,
+      "runs": 3
+    },
+    "svd/random_forest": {
+      "status": "ok",
+      "seconds_median": 3.23,
+      "seconds_min": 3.21,
+      "seconds_max": 3.27,
+      "accuracy": 53.55,
+      "accuracy_min": 53.55,
+      "accuracy_max": 53.55,
+      "runs": 3
+    },
+    "svd/gradient_boosting": {
+      "status": "ok",
+      "seconds_median": 7.99,
+      "seconds_min": 7.92,
+      "seconds_max": 8.02,
+      "accuracy": 53.55,
+      "accuracy_min": 53.55,
+      "accuracy_max": 53.55,
+      "runs": 3
+    }
+  }
+}

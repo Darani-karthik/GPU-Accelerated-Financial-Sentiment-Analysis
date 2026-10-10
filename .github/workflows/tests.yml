@@ -1,0 +1,24 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      # CPU only: the CUDA scripts need an NVIDIA GPU and are not run here. These tests cover the
+      # preprocessing, the benchmark code (CPU baselines, output parsing) and the dataset facts the README quotes.
+      - name: Install test dependencies
+        run: pip install numpy pandas scipy scikit-learn pytest
+      - name: Run tests
+        run: python -m pytest
